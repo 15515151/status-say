@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+node_modules
+dist
+.local
+*.log
+*.tsbuildinfo
+coverage
+server/*.test.js
+server/test-helpers.js

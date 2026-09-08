@@ -1,0 +1,30 @@
+services:
+  xiangcai-status:
+    build:
+      context: .
+      target: runtime
+    image: xiangcai-status:local
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      # Container networking must not inherit the development HOST / PORT values.
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3001"
+    ports:
+      - "${DOCKER_BIND_ADDRESS:-0.0.0.0}:${DOCKER_PORT:-3001}:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 30s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
