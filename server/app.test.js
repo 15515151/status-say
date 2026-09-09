@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from 'node:fs';
 import { listenForTest } from './test-helpers.js';
 import { createApp } from './app.js';
 import { sanitizeLogs, sanitizeMetrics } from './data.js';
@@ -153,5 +154,37 @@ test('private environment and server files are never served', async () => {
     for (const path of ['/.env', '/server/index.js', '/server/app.js', '/package.json']) {
       assert.equal((await fetch(`${base}${path}`)).status, 404, path);
     }
+  });
+});
+
+test('public page routes support direct loads and refreshes without proxying upstream', async () => {
+  const indexPath = new URL('../dist/index.html', import.meta.url);
+  const built = existsSync(indexPath);
+  let calls = 0;
+  await withServer({ fetchImpl: async () => { calls++; throw new Error('must not fetch'); } }, async base => {
+    for (const path of ['/', '/accounts', '/accounts/', '/requests', '/requests/', '/requests?view=recent', '/statistics', '/statistics/']) {
+      const response = await fetch(`${base}${path}`);
+      assert.equal(response.status, built ? 200 : 503, path);
+      if (built) {
+        assert.match(response.headers.get('content-type'), /text\/html/);
+        assert.equal(await response.text(), readFileSync(indexPath, 'utf8'));
+      } else {
+        assert.match(await response.text(), /npm run build/);
+      }
+    }
+    assert.equal(calls, 0);
+  });
+});
+
+test('page fallback does not swallow unknown routes, API errors, or missing assets', async () => {
+  await withServer({}, async base => {
+    for (const path of ['/unknown', '/accounts/unknown', '/requests/unknown', '/assets/missing.js']) {
+      const response = await fetch(`${base}${path}`);
+      assert.equal(response.status, 404, path);
+      assert.match(await response.text(), /Not found/);
+    }
+    const response = await fetch(`${base}/api/unknown`);
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: '接口不存在。' });
   });
 });

@@ -1,0 +1,3 @@
+export const fmt = (value: number | null | undefined, digits = 0) => value == null ? '—' : value.toLocaleString('zh-CN', { maximumFractionDigits: digits, minimumFractionDigits: digits });
+export const time = (seconds: number | null, full = false) => seconds === null ? '时间未知' : new Date(seconds * 1000).toLocaleString('zh-CN', { ...(full ? { month: '2-digit', day: '2-digit' } as const : {}), hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+export const rangeOptions = [{ value: 1, label: '最近 1 小时' }, { value: 6, label: '最近 6 小时' }, { value: 24, label: '最近 24 小时' }, { value: 72, label: '最近 3 天' }, { value: 168, label: '最近 7 天' }];

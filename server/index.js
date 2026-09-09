@@ -7,6 +7,8 @@ const app = createApp({
   baseUrl: process.env.BOT_API_BASE_URL || 'http://192.168.31.126:5332',
   apiKey: process.env.BOT_API_KEY,
   model: process.env.BOT_MODEL || 'xc',
+  rconsole: { baseUrl: process.env.RCONSOLE_BASE_URL },
+  emo: { baseUrl: process.env.EMO_BASE_URL },
   guoba: {
     baseUrl: process.env.GUOBA_BASE_URL,
     account: process.env.GUOBA_ACCOUNT,

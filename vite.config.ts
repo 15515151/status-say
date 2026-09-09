@@ -6,13 +6,4 @@ export default defineConfig(({ mode }) => ({
   server: {
     proxy: { '/api': `http://127.0.0.1:${loadEnv(mode, process.cwd(), 'PORT').PORT || '3001'}` },
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          charts: ['recharts'],
-        },
-      },
-    },
-  },
 }));

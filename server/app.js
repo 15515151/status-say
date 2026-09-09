@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { sanitizeLogs, sanitizeMetrics } from './data.js';
 import { createGuobaClient } from './guoba.js';
 import { createAvatarProxy } from './avatars.js';
+import { createRconsoleClient } from './rconsole.js';
+import { createEmoClient } from './emo.js';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, timeoutMs = 12_000, cacheMs = 10_000, guoba = {}, avatars = {} }) {
+export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, timeoutMs = 12_000, cacheMs = 10_000, guoba = {}, avatars = {}, rconsole = {}, emo = {} }) {
   const upstream = new URL(baseUrl);
   if (!['http:', 'https:'].includes(upstream.protocol) || upstream.username || upstream.password) {
     throw new Error('BOT_API_BASE_URL must be an HTTP(S) URL without credentials');
@@ -16,6 +18,8 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
   const app = express();
   const accounts = createGuobaClient(guoba);
   const avatarProxy = createAvatarProxy(avatars);
+  const parseStats = createRconsoleClient({ guobaBaseUrl: guoba.baseUrl, ...rconsole });
+  const groupStats = createEmoClient({ guobaBaseUrl: guoba.baseUrl, ...emo });
   app.disable('x-powered-by');
   app.use((_req, res, next) => {
     res.set({
@@ -97,11 +101,26 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
       return res.send(image.bytes);
     } catch { return res.status(502).json({ error: '头像暂时不可用。' }); }
   });
+  app.get('/api/parse-stats', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (Object.keys(req.query).length > 0) return res.status(400).json({ error: '解析统计不支持查询参数。' });
+    const snapshot = await parseStats.getStats();
+    if (snapshot.retryAt) res.set('Retry-After', String(Math.max(1, Math.ceil((Date.parse(snapshot.retryAt) - Date.now()) / 1000))));
+    res.status(snapshot.error ? 503 : 200).json(snapshot);
+  });
+  app.get('/api/group-stats', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (Object.keys(req.query).length > 0) return res.status(400).json({ error: '群组统计不支持查询参数。' });
+    const snapshot = await groupStats.getStats();
+    if (snapshot.retryAt) res.set('Retry-After', String(Math.max(1, Math.ceil((Date.parse(snapshot.retryAt) - Date.now()) / 1000))));
+    res.status(snapshot.error ? 503 : 200).json(snapshot);
+  });
   app.use('/api', (_req, res) => res.status(404).json({ error: '接口不存在。' }));
 
   const dist = resolve(projectRoot, 'dist');
   if (existsSync(dist)) app.use(express.static(dist, { dotfiles: 'deny' }));
-  app.get('/', (_req, res) => existsSync(resolve(dist, 'index.html'))
+  // Only public page routes fall back to the SPA; unknown APIs and files stay 404.
+  app.get(['/', '/accounts', '/requests', '/statistics'], (_req, res) => existsSync(resolve(dist, 'index.html'))
     ? res.sendFile(resolve(dist, 'index.html'))
     : res.status(503).type('text').send('Run npm run build first, or use the Vite development server.'));
   app.use((_req, res) => res.status(404).type('text').send('Not found'));
