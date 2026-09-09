@@ -40,7 +40,8 @@ nav { display: flex; gap: 29px; height: 100%; align-items: center; margin-left: 
 nav a { display: flex; align-items: center; gap: 5px; height: 100%; padding-top: 2px; border-bottom: 2px solid transparent; white-space: nowrap; }
 nav a:hover { color: var(--green-dark); }
 nav a[aria-current="page"] { color: var(--green-dark); border-bottom-color: var(--green); }
-.header-status { display: flex; gap: 8px; margin-left: auto; align-items: center; font-size: 12px; color: var(--green-dark); }
+.header-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.header-status { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--green-dark); }
 .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .header-status .status-dot { width: 7px; height: 7px; }
 .status-dot.live { box-shadow: 0 0 0 4px #eef4e9; }
@@ -80,9 +81,14 @@ h1 { font-size: clamp(25px, 2.5vw, 33px); font-weight: 620; letter-spacing: 1px;
 .site-footer > div { display: flex; align-items: center; gap: 6px; }
 .site-footer > div > svg { color: #647159; }
 .site-footer .footer-divider { margin: 0 3px; }
+.footer-actions { gap: 10px !important; }
 .last-updated { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #696f62; }
 .last-updated > svg { color: #65705a; }
 .last-updated a { display: flex; padding: 3px; margin-left: 5px; }
+.github-link { display: inline-flex; align-items: center; justify-content: center; color: #62735b; border: 1px solid #dce5d7; border-radius: 6px; background: #fbfcfa; transition: background .18s, border-color .18s, color .18s, transform .18s; }
+.github-link:hover { color: #36562f; border-color: #b9cdb0; background: #edf4e9; transform: translateY(-1px); }
+.github-link-header { width: 32px; height: 32px; }
+.github-link-footer { width: 25px; height: 25px; }
 .button { border: 1px solid #dce5d3; background: #f5f8f0; color: #5c744a; border-radius: 6px; padding: 8px 12px; display: inline-flex; align-items: center; gap: 7px; font-size: 12px; }
 .button:hover { background: #eaf2e1; }
 .warning-banner { display: flex; align-items: center; gap: 12px; padding: 14px 17px; background: #fbf6eb; border: 1px solid #eee2ca; border-radius: 8px; margin-bottom: 17px; color: #806a3f; font-size: 12px; }
@@ -111,6 +117,7 @@ nav { margin-left: 40px; }
 .brand-symbol { width: 33px; height: 33px; border-radius: 10px; }
 .brand-divider, .brand-caption { display: none; }
 nav { order: 3; margin-left: 0; gap: 0; width: 100%; height: 36px; justify-content: space-between; font-size: 12px; }
+.header-actions { gap: 9px; }
 .header-status { font-size: 10px; gap: 6px; }
 .page-shell { padding: 0 18px; }
 .page-intro { padding: 28px 0 24px; }
