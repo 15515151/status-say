@@ -7,7 +7,12 @@ const app = createApp({
   baseUrl: process.env.BOT_API_BASE_URL || 'http://192.168.31.126:5332',
   apiKey: process.env.BOT_API_KEY,
   model: process.env.BOT_MODEL || 'xc',
-  rconsole: { baseUrl: process.env.RCONSOLE_BASE_URL },
+  rconsole: {
+    baseUrl: process.env.RCONSOLE_BASE_URL,
+    // 按群统计的路径与参数名可覆盖，便于上游接口调整时无需改代码。
+    groupPath: process.env.RCONSOLE_GROUP_PATH || undefined,
+    groupParam: process.env.RCONSOLE_GROUP_PARAM || undefined,
+  },
   emo: { baseUrl: process.env.EMO_BASE_URL },
   guoba: {
     baseUrl: process.env.GUOBA_BASE_URL,

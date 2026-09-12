@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { sanitizeLogs, sanitizeMetrics } from './data.js';
 import { createGuobaClient } from './guoba.js';
 import { createAvatarProxy } from './avatars.js';
-import { createRconsoleClient } from './rconsole.js';
+import { createRconsoleClient, normalizeGroupId } from './rconsole.js';
 import { createEmoClient } from './emo.js';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -101,10 +101,37 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
       return res.send(image.bytes);
     } catch { return res.status(502).json({ error: '头像暂时不可用。' }); }
   });
+  // 群头像代理：按不透明 ID 取图，浏览器始终看不到真实群号与上游头像地址。
+  app.get('/api/parse-stats/group-avatar/:id', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const id = req.params.id;
+    const source = /^[a-f0-9]{24}$/.test(id) ? parseStats.getGroupAvatarSource(id) : null;
+    if (!source) return res.status(404).json({ error: '该群没有可用头像。' });
+    try {
+      const image = await avatarProxy.get(id, source);
+      res.set({
+        'Content-Type': image.type,
+        'Cache-Control': `public, max-age=${image.maxAge}`,
+        'Cross-Origin-Resource-Policy': 'same-origin',
+      });
+      return res.send(image.bytes);
+    } catch { return res.status(502).json({ error: '群头像暂时不可用。' }); }
+  });
   app.get('/api/parse-stats', async (req, res) => {
     res.set('Cache-Control', 'no-store');
     if (Object.keys(req.query).length > 0) return res.status(400).json({ error: '解析统计不支持查询参数。' });
     const snapshot = await parseStats.getStats();
+    if (snapshot.retryAt) res.set('Retry-After', String(Math.max(1, Math.ceil((Date.parse(snapshot.retryAt) - Date.now()) / 1000))));
+    res.status(snapshot.error ? 503 : 200).json(snapshot);
+  });
+  // 单个群的解析统计。只接受群号这一个参数，响应中的群号已脱敏。
+  app.get('/api/parse-stats/group', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const keys = Object.keys(req.query);
+    if (keys.some(key => key !== 'group_id')) return res.status(400).json({ error: '按群查询只支持 group_id 参数。' });
+    // 缺少或格式非法的群号属于请求问题，按 400 处理，不伪装成上游故障。
+    if (!normalizeGroupId(req.query.group_id)) return res.status(400).json({ error: '请填写有效的群号。' });
+    const snapshot = await parseStats.getGroupStats(req.query.group_id);
     if (snapshot.retryAt) res.set('Retry-After', String(Math.max(1, Math.ceil((Date.parse(snapshot.retryAt) - Date.now()) / 1000))));
     res.status(snapshot.error ? 503 : 200).json(snapshot);
   });

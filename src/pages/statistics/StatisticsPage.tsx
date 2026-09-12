@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { BarChart3, CheckCheck, CircleCheck, Clock3, Info, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import { BarChart3, CheckCheck, CircleCheck, Clock3, Info, Layers, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import PageLayout from '../../components/layout/PageLayout';
 import PageIntro from '../../components/layout/PageIntro';
 import RefreshControls from '../../components/status/RefreshControls';
 import { fmt } from '../../lib/format';
 import { useStatus } from '../../state/StatusContext';
+import GroupParsePanel from './GroupParsePanel';
+import PlatformList from './PlatformList';
+import PlatformMediaPanel from './PlatformMediaPanel';
+import TopGroupsPanel from './TopGroupsPanel';
+import { colors, mediaMetricsOf } from './parseMetrics';
 import useParseStats from './useParseStats';
 import './statistics.css';
-
-const colors = ['#61834c', '#5b86a6', '#b07080', '#a88b46'];
 
 export default function StatisticsPage() {
   const { automatic, setAutomatic } = useStatus();
@@ -23,21 +26,12 @@ export default function StatisticsPage() {
   const history = data?.history.slice(-days) ?? [];
   const periodTotal = history.length && history.every(day => day.count !== null) ? history.reduce((sum, day) => sum + day.count!, 0) : null;
   const charts = history.map(day => ({ ...day, value: mode === 'count' ? day.count : day.mediaSeconds === null ? null : day.mediaSeconds / 3600 }));
-  const platforms = data?.platforms ?? [];
-  const platformTotal = platforms.reduce((sum, platform) => sum + platform.count, 0);
-  const maxPlatform = Math.max(1, ...platforms.map(platform => platform.count));
   const metrics = [
     { label: '累计成功解析', value: data?.totalParses, unit: '次', icon: CheckCheck },
     { label: `最近 ${days} 天成功解析`, value: periodTotal, unit: '次', icon: BarChart3 },
     { label: '累计参与用户', value: data?.totalUsers, unit: '人', icon: Users },
+    { label: '参与群数', value: data?.totalGroups, unit: '个', icon: Layers },
     { label: '解析成功率', value: data?.media.successRate, unit: '%', icon: CircleCheck, digits: 2 },
-  ];
-  const mediaMetrics = [
-    ['视频总时长', data?.media.videoDuration], ['音频总时长', data?.media.audioDuration],
-    ['媒体总时长', data?.media.totalDuration], ['平均媒体时长', data?.media.averageDuration],
-    ['最长媒体时长', data?.media.maximumDuration], ['平均处理耗时', data?.media.averageProcessTime],
-    ['最长处理耗时', data?.media.maximumProcessTime], ['累计文件大小', data?.media.totalBytes],
-    ['平均文件大小', data?.media.averageBytes],
   ];
 
   return <PageLayout title="解析统计" healthy={ready} stateLabel={stateLabel} fetchedAt={snapshot?.fetchedAt} loading={loading} note="统计来源：R 插件解析记录">
@@ -64,17 +58,19 @@ export default function StatisticsPage() {
         </section>
         <section className="statistics-section" aria-labelledby="parse-platforms-title">
           <div className="statistics-heading"><h2 id="parse-platforms-title">平台分布</h2><span>累计成功解析</span></div>
-          {platformTotal > 0 ? <ol className="statistics-platforms">{platforms.filter(platform => platform.count > 0).map((platform, index) => <li key={platform.name}>
-            <div><span>{platform.name}</span><strong className="mono">{fmt(platform.count)}<small>{fmt(platform.count / platformTotal * 100, 1)}%</small></strong></div>
-            <div className="statistics-platform-track" aria-hidden="true"><span style={{ width: `${platform.count / maxPlatform * 100}%`, background: colors[index % colors.length] }} /></div>
-          </li>)}</ol> : <div className="statistics-empty">暂无平台记录</div>}
+          <PlatformList platforms={data.platforms} />
         </section>
+      </div>
+      <div className="statistics-columns">
+        <TopGroupsPanel groups={data.topGroups} />
+        <PlatformMediaPanel rows={data.platformMedia} trendSeconds={data.mediaTrendSeconds} />
       </div>
       <section className="statistics-section statistics-media" aria-labelledby="parse-media-title">
         <div className="statistics-heading"><h2 id="parse-media-title"><Clock3 size={17} />媒体与处理</h2><span>成功 {fmt(data.media.successCount)} 次 · 失败 {fmt(data.media.failureCount)} 次</span></div>
-        <dl>{mediaMetrics.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value ?? '未测得'}</dd></div>)}</dl>
+        <dl>{mediaMetricsOf(data.media).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value ?? '未测得'}</dd></div>)}</dl>
         <p className="statistics-caption">时长样本 {fmt(data.media.durationSamples)} 条 · 大小样本 {fmt(data.media.sizeSamples)} 条。媒体与成败统计自启用后累计，不回填旧记录；跳过的解析不计入成功率。</p>
       </section>
     </>}
+    {snapshot?.configured && <GroupParsePanel />}
   </PageLayout>;
 }
