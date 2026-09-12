@@ -146,12 +146,49 @@ npm start
 
 需要 Docker Engine 20.10+ 和 Docker Compose v2，使用 Linux 容器。宿主机无需安装 Node.js。首次部署时，从 `.env.example` 复制一份 `.env`；已有 `.env` 时直接使用，**不要覆盖已有密钥**。
 
+### 使用 CI 构建的镜像
+
+提交到 `master` 后，GitHub Actions 会运行测试、构建前端并以 `runtime` 阶段构建镜像，推送到 GitHub 容器仓库：
+
 ```sh
-# Linux / macOS，且仅在 .env 不存在时执行
+# 拉取镜像后启动，不在服务器上构建，无需在服务器安装 Node.js 工具链
+docker compose pull
+docker compose up -d
+```
+
+镜像地址为 `ghcr.io/15515151/status-say`，可用标签：
+
+| 标签 | 说明 |
+| --- | --- |
+| `latest` | 每次 `master` 构建覆盖，用于常规部署 |
+| `sha-<短提交>` | 对应具体提交，便于回滚到确定版本 |
+| `1.2.3` / `1.2` | 推送 `v1.2.3` 这类标签时生成 |
+
+上次提交若构建失败或未通过测试，`latest` 会停留在上一个成功构建的版本，不会推送半成品镜像。
+
+在 `.env` 中指定镜像可固定版本，留空则使用本地构建：
+
+```sh
+# 固定到确定版本，避免 latest 被后续构建覆盖
+XIANGCAI_IMAGE=ghcr.io/15515151/status-say:sha-a1b2c3d
+```
+
+**私有仓库需要登录：** 仓库为公开时 GHCR 镜像可直接拉取；仓库为私有，或镜像包被设为私有，需先在服务器登录，且账号需具备 `read:packages` 权限：
+
+```sh
+echo <GitHub 个人访问令牌> | docker login ghcr.io -u <GitHub 用户名> --password-stdin
+```
+
+### 在服务器本地构建
+
+本机没有 Docker、或需要基于未提交的改动构建时，保留原有方式：
+
+```sh
+# 首次部署时，且仅在 .env 不存在时执行（Windows 使用 Copy-Item .env.example .env）
 cp .env.example .env
 ```
 
-Windows 使用 `Copy-Item .env.example .env`。填写 `.env` 中的 AI Key、锅巴账号密码及可访问的上游地址，然后在项目目录执行：
+填写 `.env` 中的 AI Key、锅巴账号密码及可访问的上游地址（`XIANGCAI_IMAGE` 留空），然后执行：
 
 ```sh
 docker compose up -d --build
@@ -172,8 +209,12 @@ Compose 固定容器内部 `HOST=0.0.0.0`、`PORT=3001`，因此现有开发环�
 # 查看最近日志
 docker compose logs --tail=100 -f
 
-# 更新项目代码后重新构建并启动
+# 更新项目代码后，在服务器重新构建并启动
 docker compose up -d --build
+
+# 已使用 CI 镜像时，更新到最新构建
+docker compose pull
+docker compose up -d
 
 # 修改 .env 后重建容器以载入新配置；仅 restart 不会更新环境变量
 docker compose up -d --force-recreate
@@ -194,6 +235,20 @@ docker run -d --name xiangcai-status --restart unless-stopped --init --mount typ
 ```
 
 把 `/absolute/path/to/.env` 换成实际绝对路径，并确保配置文件对容器内的 `node` 用户可读。
+
+## 持续集成
+
+流水线配置位于 `.github/workflows/ci.yml`，在 GitHub 托管的 `ubuntu-latest` 上运行，按 Node.js 24 与 Dockerfile 一致的环境执行。
+
+| 触发 | 行为 |
+| --- | --- |
+| 提交到 `master` | 运行 `npm test` 与 `npm run build`，通过后构建镜像并推送到 GHCR |
+| 向 `master` 提交 PR | 只运行 `npm test` 与 `npm run build`，不推送镜像 |
+| 推送 `v1.0.0` 这类标签 | 额外生成 `1.0.0`、`1.0` 版本标签，`latest` 仅由 `master` 更新 |
+
+镜像只构建 `linux/amd64`。构建使用 GitHub Actions 缓存，依赖与前端产物层命中缓存时无需重新下载。同一分支连续提交会取消尚未完成的旧任务，避免过期提交的镜像覆盖新版本。
+
+镜像不包含 `.env`：密钥在运行时通过 `env_file` 注入，构建产物中也没有任何 Key。流水线使用仓库内置的 `GITHUB_TOKEN` 推送镜像，**无需在仓库中配置任何 Secrets**。若把仓库名或包名改为非 `status-say` 的其它名称，工作流会自动跟随 `github.repository`，无需修改配置。
 
 ## 检查
 

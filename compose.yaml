@@ -1,9 +1,12 @@
 services:
   xiangcai-status:
+    # 默认拉取 CI 构建好的镜像；未设置 XIANGCAI_IMAGE 时使用本地镜像 / 本地构建。
+    image: ${XIANGCAI_IMAGE:-xiangcai-status:local}
+    # 由 docker compose up --build 或旧版本的 docker compose up 触发本地构建；
+    # docker compose pull && up -d 只拉取镜像，不会重新构建。
     build:
       context: .
       target: runtime
-    image: xiangcai-status:local
     restart: unless-stopped
     init: true
     env_file:

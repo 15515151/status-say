@@ -1,0 +1,103 @@
+name: CI
+
+# 提交到 master 时校验代码并构建推送镜像；提交 PR 时只做校验，便于合并前发现问题。
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# 校验不依赖仓库写权限；推送镜像时在 build 任务内单独申请 packages: write。
+permissions:
+  contents: read
+
+# 同一分支上连续提交时取消尚未完成的旧任务，避免推送过期镜像。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: 校验
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci --no-audit --no-fund
+
+      - name: 运行测试
+        run: npm test
+
+      - name: 检查类型并构建前端
+        run: npm run build
+
+  build:
+    name: 构建镜像
+    needs: check
+    # 仅在 master 分支推送镜像；PR 只需通过上面的校验。
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 准备 Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          # 内置令牌即可推送镜像，无需额外配置密钥。
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成镜像标签
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # 镜像名统一小写，避免仓库名含大写字母时 GHCR 拒绝推送。
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: 构建并推送
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          platforms: linux/amd64
+          push: true
+          # 版本号标签写入镜像元数据，便于追溯线上运行的提交。
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 输出镜像地址
+        run: |
+          {
+            echo "### 镜像已推送"
+            echo
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo
+            echo "部署机上执行：\`docker compose pull && docker compose up -d\`"
+          } >> "$GITHUB_STEP_SUMMARY"
