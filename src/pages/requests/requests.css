@@ -10,6 +10,8 @@
 .search-field button { border: 0; background: none; display: flex; padding: 0; color: #66705b; }
 .status-filter { height: 32px; }
 .status-filter select { min-width: 77px; font-size: 10px; }
+.page-size-filter select { min-width: 84px; }
+.page-size-filter { flex-shrink: 0; }
 .table-scroll {
   overflow-x: auto;
   /* Keep the wide table from expanding the mobile layout viewport. */
@@ -84,9 +86,12 @@ th:first-child, td:first-child { padding-left: 19px; }
 .logs-heading { padding: 17px 15px; flex-direction: column; align-items: stretch; gap: 15px; }
 .logs-title h2 { font-size: 14px; }
 .logs-subtitle { display: inline; font-size: 10px; }
-.log-filters { width: 100%; gap: 8px; }
-.search-field { flex: 1; width: auto; }
+.log-filters { width: 100%; gap: 8px; flex-wrap: wrap; }
+.search-field { flex: 1 1 100%; width: auto; }
 .status-filter select { min-width: 77px; }
+/* 窄屏下两个下拉并排占满一行，避免第三个控件把搜索框挤变形。 */
+.log-filters .status-filter { flex: 1; }
+.log-filters .status-filter select { width: 100%; }
 .logs-footer { padding: 13px 15px; font-size: 10px; }
 .sample-note, .logs-footer .footer-divider { display: none; }
 .dialog-inner { padding: 21px; }
