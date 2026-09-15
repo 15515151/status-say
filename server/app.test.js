@@ -162,7 +162,7 @@ test('public page routes support direct loads and refreshes without proxying ups
   const built = existsSync(indexPath);
   let calls = 0;
   await withServer({ fetchImpl: async () => { calls++; throw new Error('must not fetch'); } }, async base => {
-    for (const path of ['/', '/accounts', '/accounts/', '/requests', '/requests/', '/requests?view=recent', '/statistics', '/statistics/']) {
+    for (const path of ['/', '/accounts', '/accounts/', '/servers', '/servers/', '/requests', '/requests/', '/requests?view=recent', '/statistics', '/statistics/']) {
       const response = await fetch(`${base}${path}`);
       assert.equal(response.status, built ? 200 : 503, path);
       if (built) {
@@ -178,7 +178,7 @@ test('public page routes support direct loads and refreshes without proxying ups
 
 test('page fallback does not swallow unknown routes, API errors, or missing assets', async () => {
   await withServer({}, async base => {
-    for (const path of ['/unknown', '/accounts/unknown', '/requests/unknown', '/assets/missing.js']) {
+    for (const path of ['/unknown', '/accounts/unknown', '/servers/unknown', '/requests/unknown', '/assets/missing.js']) {
       const response = await fetch(`${base}${path}`);
       assert.equal(response.status, 404, path);
       assert.match(await response.text(), /Not found/);

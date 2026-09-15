@@ -48,3 +48,50 @@ export type Accounts = {
   error: string | null;
   retryAt: string | null;
 };
+
+export type ServerMetricPoint = { timestamp: string; value: number };
+
+export type ServerStatus = {
+  id: string;
+  name: string;
+  region: string;
+  tags: string[];
+  os: string;
+  arch: string;
+  cpuName: string;
+  cpuCores: number | null;
+  presence: 'online' | 'offline' | 'unavailable';
+  lastSeen: string | null;
+  latest: {
+    cpuPercent: number | null;
+    load1: number | null;
+    load5: number | null;
+    load15: number | null;
+    memoryUsed: number | null;
+    memoryTotal: number | null;
+    diskUsed: number | null;
+    diskTotal: number | null;
+    swapUsed: number | null;
+    swapTotal: number | null;
+    uploadBps: number | null;
+    downloadBps: number | null;
+    totalUpload: number | null;
+    totalDownload: number | null;
+    tcpConnections: number | null;
+    udpConnections: number | null;
+    processCount: number | null;
+    uptimeSeconds: number | null;
+  } | null;
+  history: {
+    cpu: ServerMetricPoint[];
+    memory: ServerMetricPoint[];
+    disk: ServerMetricPoint[];
+  };
+  error: string | null;
+};
+
+export type ServersResponse = {
+  servers: ServerStatus[];
+  fetchedAt: string;
+  error: string | null;
+};

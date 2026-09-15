@@ -26,7 +26,7 @@ export default function PageLayout({ children, title, healthy = false, stateLabe
     <a className="skip-link" href="#page-content">跳转到主要内容</a>
     <header className="site-header"><div className="header-inner">
       <Link className="brand" to="/" aria-label="香菜状态页首页"><span className="brand-symbol"><LeafMark size={25} /></span><strong>香菜</strong><span className="brand-divider" /><span className="brand-caption">运行状态</span></Link>
-      <nav aria-label="页面导航"><NavLink to="/" end>概览</NavLink><NavLink to="/accounts">账号状态</NavLink><NavLink to="/requests">请求日志</NavLink><NavLink to="/statistics">解析统计</NavLink></nav>
+      <nav aria-label="页面导航"><NavLink to="/" end>概览</NavLink><NavLink to="/servers">服务器状态</NavLink><NavLink to="/accounts">账号状态</NavLink><NavLink to="/requests">请求日志</NavLink><NavLink to="/statistics">解析统计</NavLink></nav>
       <div className="header-actions"><span className={`header-status ${healthy ? '' : 'muted'}`} role="status"><span className={`status-dot ${healthy ? 'live' : ''}`} />{stateLabel}</span><a className="github-link github-link-header" href={repositoryUrl} target="_blank" rel="noreferrer" aria-label="在 GitHub 查看 status-say 源码（新窗口打开）" title="在 GitHub 查看源码"><Github size={18} /></a></div>
     </div></header>
     <main className="page-shell" id="page-content" tabIndex={-1}>

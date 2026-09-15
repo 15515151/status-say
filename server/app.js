@@ -7,10 +7,11 @@ import { createGuobaClient } from './guoba.js';
 import { createAvatarProxy } from './avatars.js';
 import { createRconsoleClient, normalizeGroupId } from './rconsole.js';
 import { createEmoClient } from './emo.js';
+import { createServerStatusClient } from './servers.js';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, timeoutMs = 12_000, cacheMs = 10_000, guoba = {}, avatars = {}, rconsole = {}, emo = {} }) {
+export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, timeoutMs = 12_000, cacheMs = 10_000, guoba = {}, avatars = {}, rconsole = {}, emo = {}, servers = {} }) {
   const upstream = new URL(baseUrl);
   if (!['http:', 'https:'].includes(upstream.protocol) || upstream.username || upstream.password) {
     throw new Error('BOT_API_BASE_URL must be an HTTP(S) URL without credentials');
@@ -20,6 +21,7 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
   const avatarProxy = createAvatarProxy(avatars);
   const parseStats = createRconsoleClient({ guobaBaseUrl: guoba.baseUrl, ...rconsole });
   const groupStats = createEmoClient({ guobaBaseUrl: guoba.baseUrl, ...emo });
+  const serverStatus = createServerStatusClient(servers);
   app.disable('x-powered-by');
   app.use((_req, res, next) => {
     res.set({
@@ -36,6 +38,19 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
   // Liveness is independent of credentials or outages in the monitored services.
   app.get('/api/health', (_req, res) => {
     res.set('Cache-Control', 'no-store').json({ status: 'ok' });
+  });
+  app.get('/api/servers', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (Object.keys(req.query).length > 0) return res.status(400).json({ error: '服务器状态不支持查询参数。' });
+    if (!serverStatus.configured) {
+      return res.status(503).json({ servers: [], fetchedAt: new Date().toISOString(), error: '服务器状态服务尚未配置。' });
+    }
+    try {
+      const snapshot = await serverStatus.getStatus();
+      return res.status(200).json({ servers: snapshot.servers, fetchedAt: snapshot.fetchedAt, error: snapshot.error });
+    } catch {
+      return res.status(502).json({ servers: [], fetchedAt: new Date().toISOString(), error: '服务器列表暂时无法获取。' });
+    }
   });
   async function readEndpoint(path, normalize) {
     const cached = cache.get(path);
@@ -147,7 +162,7 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
   const dist = resolve(projectRoot, 'dist');
   if (existsSync(dist)) app.use(express.static(dist, { dotfiles: 'deny' }));
   // Only public page routes fall back to the SPA; unknown APIs and files stay 404.
-  app.get(['/', '/accounts', '/requests', '/statistics'], (_req, res) => existsSync(resolve(dist, 'index.html'))
+  app.get(['/', '/accounts', '/requests', '/statistics', '/servers'], (_req, res) => existsSync(resolve(dist, 'index.html'))
     ? res.sendFile(resolve(dist, 'index.html'))
     : res.status(503).type('text').send('Run npm run build first, or use the Vite development server.'));
   app.use((_req, res) => res.status(404).type('text').send('Not found'));

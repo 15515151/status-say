@@ -7,6 +7,7 @@ const OverviewPage = lazy(() => import('./pages/overview/OverviewPage'));
 const AccountsPage = lazy(() => import('./pages/accounts/AccountsPage'));
 const RequestsPage = lazy(() => import('./pages/requests/RequestsPage'));
 const StatisticsPage = lazy(() => import('./pages/statistics/StatisticsPage'));
+const ServersPage = lazy(() => import('./pages/servers/ServersPage'));
 
 function PageRoutes() {
   const { pathname, hash } = useLocation();
@@ -20,6 +21,7 @@ function PageRoutes() {
       <Routes>
         <Route path="/" element={<OverviewPage />} />
         <Route path="/accounts" element={<AccountsPage />} />
+        <Route path="/servers" element={<ServersPage />} />
         <Route path="/requests" element={<RequestsPage />} />
         <Route path="/statistics" element={<StatisticsPage />} />
         <Route path="*" element={<PageLayout title="页面不存在" stateLabel="页面不存在"><div className="page-loading"><h1>页面不存在</h1><p>请通过顶部导航打开所需页面。</p></div></PageLayout>} />

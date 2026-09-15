@@ -14,6 +14,7 @@ const app = createApp({
     groupParam: process.env.RCONSOLE_GROUP_PARAM || undefined,
   },
   emo: { baseUrl: process.env.EMO_BASE_URL },
+  servers: { baseUrl: process.env.SERVER_STATUS_BASE_URL },
   guoba: {
     baseUrl: process.env.GUOBA_BASE_URL,
     account: process.env.GUOBA_ACCOUNT,
