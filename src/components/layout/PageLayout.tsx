@@ -12,26 +12,28 @@ type Props = {
   fetchedAt?: string | null;
   loading?: boolean;
   note?: string;
+  footerStatus?: string;
 };
 
-export default function PageLayout({ children, title, healthy = false, stateLabel, fetchedAt, loading = false, note = '状态依据模型请求统计' }: Props) {
+export default function PageLayout({ children, title, healthy = false, stateLabel, fetchedAt, loading = false, note = '状态依据模型请求统计', footerStatus }: Props) {
   const { pathname } = useLocation();
   const repositoryUrl = 'https://github.com/15515151/status-say';
   useEffect(() => {
     document.title = `${title} · 香菜`;
     window.scrollTo({ top: 0, behavior: 'instant' });
+    document.querySelector('nav a[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [pathname, title]);
 
   return <>
     <a className="skip-link" href="#page-content">跳转到主要内容</a>
     <header className="site-header"><div className="header-inner">
       <Link className="brand" to="/" aria-label="香菜状态页首页"><span className="brand-symbol"><LeafMark size={25} /></span><strong>香菜</strong><span className="brand-divider" /><span className="brand-caption">运行状态</span></Link>
-      <nav aria-label="页面导航"><NavLink to="/" end>概览</NavLink><NavLink to="/servers">服务器状态</NavLink><NavLink to="/accounts">账号状态</NavLink><NavLink to="/requests">请求日志</NavLink><NavLink to="/statistics">解析统计</NavLink></nav>
+      <nav aria-label="页面导航"><NavLink to="/" end>概览</NavLink><NavLink to="/servers">服务器状态</NavLink><NavLink to="/accounts">账号状态</NavLink><NavLink to="/requests">请求日志</NavLink><NavLink to="/statistics">解析统计</NavLink><NavLink to="/sponsor">赞助支持</NavLink></nav>
       <div className="header-actions"><span className={`header-status ${healthy ? '' : 'muted'}`} role="status"><span className={`status-dot ${healthy ? 'live' : ''}`} />{stateLabel}</span><a className="github-link github-link-header" href={repositoryUrl} target="_blank" rel="noreferrer" aria-label="在 GitHub 查看 status-say 源码（新窗口打开）" title="在 GitHub 查看源码"><Github size={18} /></a></div>
     </div></header>
     <main className="page-shell" id="page-content" tabIndex={-1}>
       {children}
-      <footer className="site-footer"><div><LeafMark size={17} /><span>香菜的小小观测站</span><span className="footer-divider">/</span><span>{note}</span></div><div className="footer-actions"><span className="last-updated" role="status"><CheckCheck size={14} />{fetchedAt ? `最近同步 ${new Date(fetchedAt).toLocaleTimeString('zh-CN', { hour12: false })}` : loading ? '正在同步数据…' : '尚未同步'}<a href="#page-content" aria-label="回到顶部"><ArrowUp size={13} /></a></span><a className="github-link github-link-footer" href={repositoryUrl} target="_blank" rel="noreferrer" aria-label="在 GitHub 查看 status-say 源码（新窗口打开）" title="在 GitHub 查看源码"><Github size={15} /></a></div></footer>
+      <footer className="site-footer"><div><LeafMark size={17} /><span>香菜的小小观测站</span><span className="footer-divider">/</span><span>{note}</span></div><div className="footer-actions"><span className="last-updated" role="status"><CheckCheck size={14} />{footerStatus ?? (fetchedAt ? `最近同步 ${new Date(fetchedAt).toLocaleTimeString('zh-CN', { hour12: false })}` : loading ? '正在同步数据…' : '尚未同步')}<a href="#page-content" aria-label="回到顶部"><ArrowUp size={13} /></a></span><a className="github-link github-link-footer" href={repositoryUrl} target="_blank" rel="noreferrer" aria-label="在 GitHub 查看 status-say 源码（新窗口打开）" title="在 GitHub 查看源码"><Github size={15} /></a></div></footer>
     </main>
   </>;
 }

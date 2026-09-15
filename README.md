@@ -11,8 +11,11 @@
 | `/accounts` | Bot 账号连接状态、消息和联系人统计 | `src/pages/accounts/` |
 | `/requests` | 请求日志、筛选、分页和详情 | `src/pages/requests/` |
 | `/statistics` | R 插件解析量、平台分布、趋势与媒体统计 | `src/pages/statistics/` |
+| `/sponsor` | 微信、支付宝赞助二维码 | `src/pages/sponsor/` |
 
 各页面支持独立访问、刷新和浏览器前进 / 后退；原来的 `/#accounts`、`/#requests` 链接会跳转到对应页面。导航会标记当前页面，页面代码和样式按需加载。
+
+赞助页展示微信和支付宝两个收款码。二维码图片来自 `r2say.qqun.top`，该地址通过图片内容安全策略白名单放行；页面不会向它发送来源页面信息。
 
 公共导航和页脚位于 `src/components/layout/`，刷新与筛选控件位于 `src/components/status/`，共享状态位于 `src/state/`，数据请求和格式化工具分别位于 `src/hooks/`、`src/lib/`。`src/App.tsx` 只负责路由。
 

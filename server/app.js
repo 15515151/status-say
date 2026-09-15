@@ -28,7 +28,7 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'no-referrer',
       'X-Frame-Options': 'DENY',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://r2say.qqun.top; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
     });
     next();
   });
@@ -162,7 +162,7 @@ export function createApp({ baseUrl, apiKey, model = 'xc', fetchImpl = fetch, ti
   const dist = resolve(projectRoot, 'dist');
   if (existsSync(dist)) app.use(express.static(dist, { dotfiles: 'deny' }));
   // Only public page routes fall back to the SPA; unknown APIs and files stay 404.
-  app.get(['/', '/accounts', '/requests', '/statistics', '/servers'], (_req, res) => existsSync(resolve(dist, 'index.html'))
+  app.get(['/', '/accounts', '/requests', '/statistics', '/servers', '/sponsor'], (_req, res) => existsSync(resolve(dist, 'index.html'))
     ? res.sendFile(resolve(dist, 'index.html'))
     : res.status(503).type('text').send('Run npm run build first, or use the Vite development server.'));
   app.use((_req, res) => res.status(404).type('text').send('Not found'));
