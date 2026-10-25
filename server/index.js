@@ -13,7 +13,7 @@ const app = createApp({
     groupPath: process.env.RCONSOLE_GROUP_PATH || undefined,
     groupParam: process.env.RCONSOLE_GROUP_PARAM || undefined,
   },
-  emo: { baseUrl: process.env.EMO_BASE_URL },
+  emo: { baseUrl: process.env.EMO_BASE_URL, token: process.env.EMO_ACCESS_TOKEN },
   servers: { baseUrl: process.env.SERVER_STATUS_BASE_URL },
   guoba: {
     baseUrl: process.env.GUOBA_BASE_URL,

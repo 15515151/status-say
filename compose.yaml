@@ -18,6 +18,12 @@ services:
       PORT: "3001"
     ports:
       - "${DOCKER_BIND_ADDRESS:-0.0.0.0}:${DOCKER_PORT:-3001}:3001"
+    volumes:
+      # 只覆盖两个源文件：镜像里还没有 EMO_ACCESS_TOKEN 支持时，挂上这两份就能用
+      # （emo.js 负责发 token 头，index.js 负责把 .env 的值传进去）；
+      # 镜像以后更新到该版本，目录依然存在，挂载继续有效（内容与镜像一致）。
+      - ./server/emo.js:/app/server/emo.js:ro
+      - ./server/index.js:/app/server/index.js:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     read_only: true

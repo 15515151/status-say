@@ -42,6 +42,14 @@ function validRoot(value) {
   } catch { return null; }
 }
 
+// 兼容不带 scheme 的配置，统一按 http 补全（注意 host:port 里的冒号不是协议，只有 http(s):// 才算）；
+// 含账号密码、查询或片段的写法一律视为配置错误。
+function parseBaseUrl(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return { url: null, invalid: false };
+  return { url: validRoot(/^https?:\/\//i.test(text) ? text : `http://${text}`), invalid: true };
+}
+
 async function readJson(response) {
   if (!response.ok || !response.headers.get('content-type')?.includes('application/json') || Number(response.headers.get('content-length')) > MAX_BODY_BYTES) {
     await response.body?.cancel();
@@ -57,25 +65,36 @@ async function readJson(response) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
-export function createEmoClient({ baseUrl, guobaBaseUrl = '', fetchImpl = fetch, timeoutMs = 12_000, cacheMs = 30_000, retryMs = 60_000, now = Date.now } = {}) {
-  const configuredUrl = baseUrl ?? validRoot(guobaBaseUrl)?.origin ?? '';
-  const configured = Boolean(configuredUrl);
-  const root = validRoot(configuredUrl);
+export function createEmoClient({ baseUrl, guobaBaseUrl = '', token = '', fetchImpl = fetch, timeoutMs = 12_000, cacheMs = 30_000, retryMs = 60_000, now = Date.now } = {}) {
+  // 显式配置优先（空串 = 关闭），否则沿用锅巴地址的源，与旧行为一致。
+  const configured = parseBaseUrl(baseUrl == null ? validRoot(guobaBaseUrl)?.origin ?? '' : baseUrl);
+  const root = configured.url;
+  /** 写了地址却解析不出来（带账号密码、查询串等）：按配置错误处理，明确禁用则不算错误 */
+  const misconfigured = configured.invalid && !root;
   if (root) root.pathname = `${root.pathname.replace(/\/+$/, '')}/`;
+  /**
+   * 上游 JiuLi 在 config/config/server.yaml 配了 auth.access_token 时，/api/emo/stats 需要带 token。
+   * 只放进请求头，不进 URL（避免出现在日志 / 浏览历史里），也从不回传给浏览器。
+   */
+  const accessToken = String(token ?? '').trim();
+  const headers = accessToken
+    ? { Accept: 'application/json', access_token: accessToken, Host: root?.host ?? '' }
+    : { Accept: 'application/json' };
+  const upstream = new URL('api/emo/stats', root || 'http://invalid');
   let cached;
   let cacheUntil = 0;
   let inFlight;
 
   return {
     async getStats() {
-      if (!configured) return { configured: false, data: null, partial: false, updatedAt: null, fetchedAt: null, error: null, retryAt: null };
+      if (misconfigured) return { configured: true, data: null, partial: false, updatedAt: null, fetchedAt: null, error: '群组统计连接配置有误，请联系管理员。', retryAt: null };
+      if (!root) return { configured: false, data: null, partial: false, updatedAt: null, fetchedAt: null, error: null, retryAt: null };
       if (cached && now() < cacheUntil) return cached;
       if (inFlight) return inFlight;
       inFlight = (async () => {
         try {
-          if (!root) throw new Error('EMO_CONFIGURATION');
-          const response = await fetchImpl(new URL('api/emo/stats', root), {
-            headers: { Accept: 'application/json' },
+          const response = await fetchImpl(upstream, {
+            headers,
             redirect: 'error',
             signal: AbortSignal.timeout(timeoutMs),
           });
@@ -84,7 +103,7 @@ export function createEmoClient({ baseUrl, guobaBaseUrl = '', fetchImpl = fetch,
           cacheUntil = now() + cacheMs;
         } catch {
           cacheUntil = now() + retryMs;
-          cached = { configured: true, data: null, partial: false, updatedAt: null, fetchedAt: null, error: root ? '群组统计暂时不可用，请稍后重试。' : '群组统计连接配置有误，请联系管理员。', retryAt: new Date(cacheUntil).toISOString() };
+          cached = { configured: true, data: null, partial: false, updatedAt: null, fetchedAt: null, error: '群组统计暂时不可用，请稍后重试。', retryAt: new Date(cacheUntil).toISOString() };
         }
         return cached;
       })();
